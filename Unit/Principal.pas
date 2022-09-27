@@ -11,7 +11,8 @@ uses
   FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.UI.Intf, FireDAC.Stan.Def,
   FireDAC.Stan.Pool, FireDAC.Phys, FireDAC.Phys.IB, FireDAC.Phys.IBDef,
   FireDAC.VCLUI.Wait, Vcl.Menus, System.MaskUtils, FireDAC.Phys.MSAcc,
-  FireDAC.Phys.MSAccDef, StrUtils, Vcl.Samples.Gauges, Vcl.Buttons;
+  FireDAC.Phys.MSAccDef, StrUtils, Vcl.Samples.Gauges, Vcl.Buttons,
+  System.ImageList, Vcl.ImgList;
 
 type
   TfrPrincipal = class(TForm)
@@ -60,12 +61,13 @@ type
     edtTotalHoras: TLabeledEdit;
     fdConnOrigem: TFDConnection;
     Gauge1: TGauge;
-    btnImportar: TBitBtn;
-    btnGravar: TBitBtn;
-    btnFinalizar: TBitBtn;
-    btnLimparCampos: TBitBtn;
-    btnRestaurar: TBitBtn;
-    btnPesquisar: TBitBtn;
+    ImageList1: TImageList;
+    btnImportar: TButton;
+    btnGravar: TButton;
+    btnFinalizar: TButton;
+    btnLimparCampos: TButton;
+    btnRestaurar: TButton;
+    btnPesquisar: TButton;
     procedure btnFinalizarClick(Sender: TObject);
     procedure btnGravarClick(Sender: TObject);
     procedure btnLimparCamposClick(Sender: TObject);
@@ -324,10 +326,10 @@ begin
     edtDataInicial.Enabled := True;
     rgStatus.Enabled       := True;
     rgTipoChamado.Enabled  := True;
-    memoObs.Enabled        := True;
     edtHoraIni.Enabled     := True;
     edtHoraFim.Enabled     := True;
     edtPesquisa.Enabled    := True;
+    memoObs.Enabled        := True;
     memoDescricao.Enabled  := False;
     edtNomeCliente.Enabled := False;
   end
@@ -564,6 +566,7 @@ begin
   edtIdChamado.Text   := dbgChamados.Columns.Items[0].Field.Text;
   edtChamado.Text     := dbgChamados.Columns.Items[1].Field.Text;
   edtNomeCliente.Text := dbgChamados.Columns.Items[2].Field.Text;
+  memoDescricao.Text  := dbgChamados.Columns.Items[3].Field.Text;
 
   HabilitaDesabilitaCampos;
 
@@ -613,6 +616,11 @@ begin
   edtIdChamado.Text   := dbgMestreDetalhe.Columns.Items[0].Field.Text;
   edtChamado.Text     := dbgMestreDetalhe.Columns.Items[1].Field.Text;
   edtDataInicial.Text := dbgMestreDetalhe.Columns.Items[2].Field.Text;
+
+  //apenas para mostrar o cliente e descrição
+  edtNomeCliente.Text := dbgChamados.Columns.Items[2].Field.Text;
+  memoDescricao.Text  := dbgChamados.Columns.Items[3].Field.Text;
+  // ---------------
 
   vStatus := dbgMestreDetalhe.Columns.Items[4].Field.Text;
   if vStatus = 'A' then
@@ -732,9 +740,31 @@ begin
   QrConsulta.Connection := fdConnOrigem;
   QrConsulta.Close;
   QrConsulta.Sql.Clear;
-  QrConsulta.Sql.Add('SELECT DTINICIO, DTFIM, CHAMADOS, STATUS, HINICIO1, PAUSA1, HINICIO2, PAUSA2, HINICIO3, PAUSA3, HINICIO4, PAUSA4, HINICIO5, PAUSA5, TOTHORAS, CLIENTE, DESCRICAO, TIPO, OBS FROM PLANILHA1;');
+  QrConsulta.Sql.Text := 'SELECT ' + sLineBreak
+                      + 'DTINICIO, ' + sLineBreak
+                      + 'DTFIM, ' + sLineBreak
+                      + 'CHAMADOS, ' + sLineBreak
+                      + 'STATUS, ' + sLineBreak
+                      + 'HINICIO1, ' + sLineBreak
+                      + 'PAUSA1, ' + sLineBreak
+                      + 'HINICIO2, ' + sLineBreak
+                      + 'PAUSA2, ' + sLineBreak
+                      + 'HINICIO3, ' + sLineBreak
+                      + 'PAUSA3, ' + sLineBreak
+                      + 'HINICIO4, ' + sLineBreak
+                      + 'PAUSA4, ' + sLineBreak
+                      + 'HINICIO5, ' + sLineBreak
+                      + 'PAUSA5, ' + sLineBreak
+                      + 'TOTHORAS, ' + sLineBreak
+                      + 'CLIENTE, ' + sLineBreak
+                      + 'DESCRICAO, ' + sLineBreak
+                      + 'TIPO, ' + sLineBreak
+                      + 'OBS ' + sLineBreak
+                      + 'FROM PLANILHA1 ' + sLineBreak
+                      + 'ORDER BY DTINICIO, HINICIO1 ';
   QrConsulta.FetchOptions.Mode := fmAll;
   QrConsulta.Open;
+  QrConsulta.First;
 
   Gauge1.MinValue := 0;
   Gauge1.MaxValue := QrConsulta.RecordCount;
@@ -765,81 +795,92 @@ begin
       fdConn.StartTransaction;
 
       vQueryInserirChamado.Sql.Clear;
-      vQueryInserirChamado.SQL.Add('INSERT INTO CHAMADOS ( IDCHAMADO, CODCHAMADO, NOMECLIENTE, DESCRICAO ) VALUES ( :IDCHAMADO, :CODCHAMADO, :NOMECLIENTE, :DESCRICAO )');
-      vQueryInserirChamado.ParamByName('IDCHAMADO').AsInteger  := AutoIncremento('CHAMADOS', 'IDCHAMADO');
-      vQueryInserirChamado.ParamByName('DESCRICAO').AsString   := UpperCase(Trim(AnsiToAscii(QrConsulta.FieldByName('DESCRICAO').AsString)));
+      vQueryInserirChamado.Sql.Text := {000}  'SELECT *  ' +
+                                        {001}  'FROM CHAMADOS C  ' +
+                                        {002}  'WHERE  C.CODCHAMADO = :CODCHAMADO ';
       vQueryInserirChamado.ParamByName('CODCHAMADO').AsInteger := QrConsulta.FieldByName('CHAMADOS').AsInteger;
-      vQueryInserirChamado.ParamByName('NOMECLIENTE').AsString := UpperCase(Trim(AnsiToAscii(QrConsulta.FieldByName('CLIENTE').AsString)));
-      vQueryInserirChamado.ExecSQL;
+      vQueryInserirChamado.Open;
+      vQueryInserirChamado.First;
+
+      if vQueryInserirChamado.RecordCount = 0 then
+      begin
+        vQueryInserirChamado.Sql.Clear;
+        vQueryInserirChamado.SQL.Add('INSERT INTO CHAMADOS ( IDCHAMADO, CODCHAMADO, NOMECLIENTE, DESCRICAO ) VALUES ( :IDCHAMADO, :CODCHAMADO, :NOMECLIENTE, :DESCRICAO )');
+        vQueryInserirChamado.ParamByName('IDCHAMADO').AsInteger  := AutoIncremento('CHAMADOS', 'IDCHAMADO');
+        vQueryInserirChamado.ParamByName('DESCRICAO').AsString   := UpperCase(Trim(AnsiToAscii(QrConsulta.FieldByName('DESCRICAO').AsString)));
+        vQueryInserirChamado.ParamByName('CODCHAMADO').AsInteger := QrConsulta.FieldByName('CHAMADOS').AsInteger;
+        vQueryInserirChamado.ParamByName('NOMECLIENTE').AsString := UpperCase(Trim(AnsiToAscii(QrConsulta.FieldByName('CLIENTE').AsString)));
+        vQueryInserirChamado.ExecSQL;
+      end;
 
       for I := 1 to 5 do
+      begin
+        vQueryInserirItChamados.Sql.Clear;
+        vQueryInserirItChamados.Sql.Text :=  {000}  'INSERT INTO ITCHAMADO ( IDITCHAMADO,' +
+                                      {001}  'CODCHAMADO, ' +
+                                      {002}  'DATAINICIO, ' +
+                                      {003}  'STATUS, ' +
+                                      {004}  'HORAINICIO, ' +
+                                      {005}  'HORAFIM, ' +
+                                      {006}  'TIPOCHAMADO, ' +
+                                      {007}  'OBS ' +
+
+                                      {000}  ') VALUES( :IDITCHAMADO,' +
+                                      {001}  ':CODCHAMADO, ' +
+                                      {002}  ':DATAINICIO, ' +
+                                      {003}  ':STATUS, ' +
+                                      {004}  ':HORAINICIO, ' +
+                                      {005}  ':HORAFIM, ' +
+                                      {006}  ':TIPOCHAMADO, ' +
+                                      {007}  ':OBS ' +
+                                      {008}  ') ';
+
+        vQueryInserirItChamados.ParamByName('IDITCHAMADO').AsInteger := AutoIncremento('ITCHAMADO', 'IDITCHAMADO');
+        vQueryInserirItChamados.ParamByName('CODCHAMADO').AsInteger  := QrConsulta.FieldByName('CHAMADOS').AsInteger;
+        vQueryInserirItChamados.ParamByName('DATAINICIO').AsDateTime := QrConsulta.FieldByName('DTINICIO').AsDateTime;
+        vQueryInserirItChamados.ParamByName('STATUS').AsString       := UpperCase(Trim(QrConsulta.FieldByName('STATUS').AsString));
+        if i = 1 then
         begin
-          vQueryInserirItChamados.Sql.Clear;
-          vQueryInserirItChamados.Sql.Text :=  {000}  'INSERT INTO ITCHAMADO ( IDITCHAMADO,' +
-                                        {001}  'CODCHAMADO, ' +
-                                        {002}  'DATAINICIO, ' +
-                                        {003}  'STATUS, ' +
-                                        {004}  'HORAINICIO, ' +
-                                        {005}  'HORAFIM, ' +
-                                        {006}  'TIPOCHAMADO, ' +
-                                        {007}  'OBS ' +
-
-                                        {000}  ') VALUES( :IDITCHAMADO,' +
-                                        {001}  ':CODCHAMADO, ' +
-                                        {002}  ':DATAINICIO, ' +
-                                        {003}  ':STATUS, ' +
-                                        {004}  ':HORAINICIO, ' +
-                                        {005}  ':HORAFIM, ' +
-                                        {006}  ':TIPOCHAMADO, ' +
-                                        {007}  ':OBS ' +
-                                        {008}  ') ';
-
-          vQueryInserirItChamados.ParamByName('IDITCHAMADO').AsInteger := AutoIncremento('ITCHAMADO', 'IDITCHAMADO');
-          vQueryInserirItChamados.ParamByName('CODCHAMADO').AsInteger  := QrConsulta.FieldByName('CHAMADOS').AsInteger;
-          vQueryInserirItChamados.ParamByName('DATAINICIO').AsDateTime := QrConsulta.FieldByName('DTINICIO').AsDateTime;
-          vQueryInserirItChamados.ParamByName('STATUS').AsString       := UpperCase(Trim(QrConsulta.FieldByName('STATUS').AsString));
-          if i = 1 then
-          begin
-            vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO1').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO1').AsString)));
-            vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA1').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA1').AsString)));
-          end
-          else
-          if i = 2 then
-          begin
-            vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO2').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO2').AsString)));
-            vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA2').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA2').AsString)));
-          end
-          else
-          if i = 3 then
-          begin
-            vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO3').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO3').AsString)));
-            vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA3').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA3').AsString)));
-          end
-          else
-          if i = 4 then
-          begin
-            vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO4').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO4').AsString)));
-            vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA4').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA4').AsString)));
-          end
-          else
-          if i = 5 then
-          begin
-            vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO5').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO5').AsString)));
-            vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA5').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA5').AsString)));
-          end;
-
-          vQueryInserirItChamados.ParamByName('TIPOCHAMADO').AsString  := UpperCase(Trim(QrConsulta.FieldByName('TIPO').AsString));
-          vQueryInserirItChamados.ParamByName('OBS').AsString          := UpperCase(Trim(memoObs.Lines.Text));
-
-          if (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899 00:00:00')
-            OR (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899') then
-            Continue
-          else
-            vQueryInserirItChamados.ExecSQL;
+          vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO1').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO1').AsString)));
+          vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA1').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA1').AsString)));
+        end
+        else
+        if i = 2 then
+        begin
+          vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO2').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO2').AsString)));
+          vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA2').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA2').AsString)));
+        end
+        else
+        if i = 3 then
+        begin
+          vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO3').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO3').AsString)));
+          vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA3').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA3').AsString)));
+        end
+        else
+        if i = 4 then
+        begin
+          vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO4').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO4').AsString)));
+          vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA4').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA4').AsString)));
+        end
+        else
+        if i = 5 then
+        begin
+          vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO5').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO5').AsString)));
+          vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA5').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA5').AsString)));
         end;
 
-        fdConn.Commit;
-        QrConsulta.Next;
+        vQueryInserirItChamados.ParamByName('TIPOCHAMADO').AsString  := UpperCase(Trim(QrConsulta.FieldByName('TIPO').AsString));
+        vQueryInserirItChamados.ParamByName('OBS').AsString          := UpperCase(Trim(memoObs.Lines.Text));
+
+        if (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899 00:00:00')
+          OR (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899') then
+          Continue
+        else
+          vQueryInserirItChamados.ExecSQL;
+      end;
+
+      fdConn.Commit;
+      QrConsulta.Next;
 
     Except
       on E:Exception do
