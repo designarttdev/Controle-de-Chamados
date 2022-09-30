@@ -12,7 +12,7 @@ uses
   FireDAC.Stan.Pool, FireDAC.Phys, FireDAC.Phys.IB, FireDAC.Phys.IBDef,
   FireDAC.VCLUI.Wait, Vcl.Menus, System.MaskUtils, FireDAC.Phys.MSAcc,
   FireDAC.Phys.MSAccDef, StrUtils, Vcl.Samples.Gauges, Vcl.Buttons,
-  System.ImageList, Vcl.ImgList;
+  System.ImageList, Vcl.ImgList, System.Win.TaskbarCore, Vcl.Taskbar;
 
 type
   TfrPrincipal = class(TForm)
@@ -68,6 +68,7 @@ type
     btnLimparCampos: TButton;
     btnRestaurar: TButton;
     btnPesquisar: TButton;
+    Taskbar1: TTaskbar;
     procedure btnFinalizarClick(Sender: TObject);
     procedure btnGravarClick(Sender: TObject);
     procedure btnLimparCamposClick(Sender: TObject);
@@ -768,6 +769,8 @@ begin
 
   Gauge1.MinValue := 0;
   Gauge1.MaxValue := QrConsulta.RecordCount;
+  TaskBar1.ProgressMaxValue := QrConsulta.RecordCount;
+  TaskBar1.ProgressState := TTaskBarProgressState.Normal;
   Gauge1.Visible  := True;
 
   vQueryInserirChamado := TFDQuery.Create(nil);
@@ -887,12 +890,17 @@ begin
       begin
         ShowMessage('Erro: ' + e.Message);
         fdConn.Rollback;
+        TaskBar1.ProgressValue := TaskBar1.ProgressValue;
+        TaskBar1.ProgressState := TTaskBarProgressState.Error;
+        Break;
       end;
     end;
     Gauge1.Progress := Gauge1.Progress +1;
+    TaskBar1.ProgressValue := TaskBar1.ProgressValue + 1;
     Application.ProcessMessages;
   end;
   Gauge1.Visible := False;
+  TaskBar1.ProgressValue := 0;
   QrConsulta.Free;
   vQueryInserirChamado.Free;
   vQueryInserirItChamados.Free;
