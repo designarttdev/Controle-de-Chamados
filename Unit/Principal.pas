@@ -736,6 +736,7 @@ var
   QrConsulta, vQueryInserirChamado, vQueryInserirItChamados : TFDQuery;
   I : Integer;
 begin
+  Gauge1.Progress := 0;
   // importar dados da planilha
   QrConsulta := TFDQuery.Create(nil);
   QrConsulta.Connection := fdConnOrigem;
