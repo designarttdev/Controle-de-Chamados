@@ -119,9 +119,10 @@ begin
 
   ConsultaChamados;
 
-//  vQueryChamado.SQL.Add('ORDER BY C.IDCHAMADO DESC');
+  vQueryChamado.SQL.Add('ORDER BY C.IDCHAMADO --DESC');
+
   vQueryChamado.Open;
-  vQueryChamado.Last;
+  vQueryChamado.First;
 
   vQueryItChamados.Close;
   vQueryItChamados.Sql.Clear;
@@ -131,18 +132,20 @@ begin
   vQueryItChamados.Open;
   vQueryItChamados.First;
 
-  vQueryItChamados.Open;
+  AjustarColunas(dbgChamados);
+  AjustarColunas(dbgMestreDetalhe);
 
   edtDataInicial.Text := DateTimeToStr(Date);
-
-  AjustarColunas(dbgMestreDetalhe);
-  AjustarColunas(dbgChamados);
 
   vEditaChamado   := False;
   vEditaItChamado := False;
   vHabilitaAll    := True;
   HabilitaDesabilitaCampos;
   vHabilitaAll    := False;
+
+  dbgMestreDetalhe.SelectedField := dbgMestreDetalhe.Columns[0].Field;
+  dbgChamados.SelectedField      := dbgChamados.Columns[0].Field;
+  dbgChamados.SetFocus;
 end;
 
 procedure TfrPrincipal.AjustarColunas(DBGrid : TDBgrid);
