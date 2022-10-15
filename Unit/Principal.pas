@@ -12,7 +12,8 @@ uses
   FireDAC.Stan.Pool, FireDAC.Phys, FireDAC.Phys.IB, FireDAC.Phys.IBDef,
   FireDAC.VCLUI.Wait, Vcl.Menus, System.MaskUtils, FireDAC.Phys.MSAcc,
   FireDAC.Phys.MSAccDef, StrUtils, Vcl.Samples.Gauges, Vcl.Buttons,
-  System.ImageList, Vcl.ImgList, System.Win.TaskbarCore, Vcl.Taskbar;
+  System.ImageList, Vcl.ImgList, System.Win.TaskbarCore, Vcl.Taskbar,
+  Vcl.WinXCtrls;
 
 type
   TfrPrincipal = class(TForm)
@@ -69,6 +70,8 @@ type
     btnRestaurar: TButton;
     btnPesquisar: TButton;
     Taskbar1: TTaskbar;
+    pnlLoading: TPanel;
+    aiLoading: TActivityIndicator;
     procedure btnFinalizarClick(Sender: TObject);
     procedure btnGravarClick(Sender: TObject);
     procedure btnLimparCamposClick(Sender: TObject);
@@ -98,6 +101,8 @@ type
     procedure LimpaCampos;
     procedure ConsultaChamados;
     function AnsiToAscii(str: String): String;
+    procedure AtivaAnimacao;
+    procedure DesativaAnimacao;
     { Private declarations }
   public
     { Public declarations }
@@ -112,40 +117,69 @@ implementation
 
 procedure TfrPrincipal.FormShow(Sender: TObject);
 begin
+  {$REGION 'Processo Principal'}
 
-  vTotHoras := 0;
+    TThread.CreateAnonymousThread(
+    procedure()
+    begin
 
-  fdConn.Connected := True;
+      {$REGION 'Ativa Animação'}
+        TThread.Synchronize(TThread.CurrentThread,
+        procedure()
+        begin
+          AtivaAnimacao;
+        end);
+      {$ENDREGION}
 
-  ConsultaChamados;
+      {$REGION ' Processo Principal '}
 
-  vQueryChamado.SQL.Add('ORDER BY C.IDCHAMADO --DESC');
+        vTotHoras := 0;
 
-  vQueryChamado.Open;
-  vQueryChamado.First;
+        fdConn.Connected := True;
 
-  vQueryItChamados.Close;
-  vQueryItChamados.Sql.Clear;
-  vQueryItChamados.SQL.Add('SELECT IT.IDITCHAMADO, IT.CODCHAMADO, IT.DATAINICIO, IT.DATAFIM, IT.STATUS, IT.HORAINICIO, IT.HORAFIM, IT.TIPOCHAMADO, IT.OBS');
-  vQueryItChamados.SQL.Add('FROM ITCHAMADO IT --WHERE IT.CODCHAMADO = :CODCHAMADO');
-  vQueryItChamados.SQL.Add('ORDER BY IT.IDITCHAMADO DESC');
-  vQueryItChamados.Open;
-  vQueryItChamados.First;
+        ConsultaChamados;
 
-  AjustarColunas(dbgChamados);
-  AjustarColunas(dbgMestreDetalhe);
+        vQueryChamado.SQL.Add('ORDER BY C.IDCHAMADO --DESC');
 
-  edtDataInicial.Text := DateTimeToStr(Date);
+        vQueryChamado.Open;
+        vQueryChamado.First;
 
-  vEditaChamado   := False;
-  vEditaItChamado := False;
-  vHabilitaAll    := True;
-  HabilitaDesabilitaCampos;
-  vHabilitaAll    := False;
+        vQueryItChamados.Close;
+        vQueryItChamados.Sql.Clear;
+        vQueryItChamados.SQL.Add('SELECT IT.IDITCHAMADO, IT.CODCHAMADO, IT.DATAINICIO, IT.DATAFIM, IT.STATUS, IT.HORAINICIO, IT.HORAFIM, IT.TIPOCHAMADO, IT.OBS');
+        vQueryItChamados.SQL.Add('FROM ITCHAMADO IT --WHERE IT.CODCHAMADO = :CODCHAMADO');
+        vQueryItChamados.SQL.Add('ORDER BY IT.IDITCHAMADO DESC');
+        vQueryItChamados.Open;
+        vQueryItChamados.First;
 
-  dbgMestreDetalhe.SelectedField := dbgMestreDetalhe.Columns[0].Field;
-  dbgChamados.SelectedField      := dbgChamados.Columns[0].Field;
-  dbgChamados.SetFocus;
+        AjustarColunas(dbgChamados);
+        AjustarColunas(dbgMestreDetalhe);
+
+        edtDataInicial.Text := DateTimeToStr(Date);
+
+        vEditaChamado   := False;
+        vEditaItChamado := False;
+        vHabilitaAll    := True;
+        HabilitaDesabilitaCampos;
+        vHabilitaAll    := False;
+
+        dbgMestreDetalhe.SelectedField := dbgMestreDetalhe.Columns[0].Field;
+        dbgChamados.SelectedField      := dbgChamados.Columns[0].Field;
+        dbgChamados.SetFocus;
+
+      {$ENDREGION}
+
+      {$REGION 'Desativa Animação'}
+        TThread.Synchronize(TThread.CurrentThread,
+        procedure()
+        begin
+          DesativaAnimacao;
+        end);
+      {$ENDREGION}
+
+    end).Start;
+
+  {$ENDREGION}
 end;
 
 procedure TfrPrincipal.AjustarColunas(DBGrid : TDBgrid);
@@ -409,132 +443,158 @@ var
   i, vNumeroCHamado : Integer;
   vStatus, vTipo : String;
 begin
-  vNumeroCHamado := 0;
-  vQueryChamado.Close;
-  vQueryChamado.Sql.Clear;
-  vQueryChamado.SQL.Add('SELECT C.* FROM CHAMADOS C WHERE C.CODCHAMADO = :CODCHAMADO');
-  vQueryChamado.ParamByName('CODCHAMADO').AsInteger := StrToInt(Trim(edtChamado.Text));
-  vQueryChamado.Open;
-  vQueryChamado.First;
-
-  vNumeroCHamado := vQueryChamado.FieldByName('CODCHAMADO').AsInteger;
-  try
-    if fdConn.InTransaction then
-      fdConn.Rollback;
-
-    fdConn.StartTransaction;
-
-    if (vQueryChamado.RecordCount = 0) AND (not vEditaChamado) then
-    begin
-      vQueryChamado.Close;
-      vQueryChamado.Sql.Clear;
-      vQueryChamado.SQL.Add('INSERT INTO CHAMADOS ( IDCHAMADO, CODCHAMADO, NOMECLIENTE, DESCRICAO ) VALUES ( :IDCHAMADO, :CODCHAMADO, :NOMECLIENTE, :DESCRICAO )');
-      vQueryChamado.ParamByName('IDCHAMADO').AsInteger  := AutoIncremento('CHAMADOS', 'IDCHAMADO');
-      vQueryChamado.ParamByName('DESCRICAO').AsString   := Trim(memoDescricao.Lines.Text);
-      vQueryChamado.ParamByName('CODCHAMADO').AsInteger := StrToInt(Trim(edtChamado.Text));
-      vQueryChamado.ParamByName('NOMECLIENTE').AsString := Trim(edtNomeCliente.Text);
-      vQueryChamado.ExecSQL;
-    end
-    else if (vQueryChamado.RecordCount = 1) AND (vEditaChamado) then
-    begin
-      vQueryChamado.Close;
-      vQueryChamado.Sql.Clear;
-      vQueryChamado.SQL.Add('UPDATE CHAMADOS C SET C.NOMECLIENTE = :NOMECLIENTE, C.DESCRICAO = :DESCRICAO WHERE C.CODCHAMADO = :CODCHAMADO AND C.IDCHAMADO = ' + edtIdChamado.Text);
-      vQueryChamado.ParamByName('CODCHAMADO').AsInteger := vNumeroCHamado;
-      vQueryChamado.ParamByName('NOMECLIENTE').AsString := Trim(edtNomeCliente.Text);
-      vQueryChamado.ParamByName('DESCRICAO').AsString   := Trim(memoDescricao.Lines.Text);
-      vQueryChamado.ExecSQL;
-    end;
-
-    vQueryItChamados.Close;
-    vQueryItChamados.Sql.Clear;
-
-    if (edtDataInicial.Enabled) and (edtIdChamado.Text = '') then
-    Begin
-
-      vQueryItChamados.Sql.Text :=  {000}  'INSERT INTO ITCHAMADO ( IDITCHAMADO,' +
-                                    {001}  'CODCHAMADO, ' +
-                                    {002}  'DATAINICIO, ' +
-                                    {003}  'STATUS, ' +
-                                    {004}  'HORAINICIO, ' +
-                                    {005}  'HORAFIM, ' +
-                                    {006}  'TIPOCHAMADO, ' +
-                                    {007}  'OBS ' +
-
-                                    {000}  ') VALUES( :IDITCHAMADO,' +
-                                    {001}  ':CODCHAMADO, ' +
-                                    {002}  ':DATAINICIO, ' +
-                                    {003}  ':STATUS, ' +
-                                    {004}  ':HORAINICIO, ' +
-                                    {005}  ':HORAFIM, ' +
-                                    {006}  ':TIPOCHAMADO, ' +
-                                    {007}  ':OBS ' +
-                                    {008}  ') ';
-
-      VerificaCamposRadioGroup(vStatus, vTipo);
-      vQueryItChamados.ParamByName('IDITCHAMADO').AsInteger := AutoIncremento('ITCHAMADO', 'IDITCHAMADO');
-      vQueryItChamados.ParamByName('CODCHAMADO').AsInteger  := StrToInt(Trim(edtChamado.Text));
-      vQueryItChamados.ParamByName('DATAINICIO').AsDateTime := StrToDateTIme(edtDataInicial.Text);
-      vQueryItChamados.ParamByName('STATUS').AsString       := vStatus;
-      vQueryItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTIme(edtHoraIni.Text);
-      vQueryItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTIme(edtHoraFim.Text);
-      vQueryItChamados.ParamByName('TIPOCHAMADO').AsString  := vTipo;
-      vQueryItChamados.ParamByName('OBS').AsString          := Trim(memoObs.Lines.Text);
-
-      vQueryItChamados.ExecSQL;
-    End
-    else if vEditaItChamado then
-    begin
-      vQueryItChamados.Sql.Text :=  {000}  'UPDATE ITCHAMADO IT SET IT.CODCHAMADO = :CODCHAMADO, ' +
-                                    {001}  'IT.DATAINICIO = :DATAINICIO, ' +
-                                    {002}  'IT.DATAFIM = :DATAFIM, ' +
-                                    {003}  'IT.STATUS = :STATUS, ' +
-                                    {004}  'IT.HORAINICIO = :HORAINICIO, ' +
-                                    {005}  'IT.HORAFIM = :HORAFIM, ' +
-                                    {007}  'IT.TIPOCHAMADO = :TIPOCHAMADO, ' +
-                                    {008}  'IT.OBS = :OBS ' +
-                                    {009}  'WHERE  IT.CODCHAMADO = :CODCHAMADO  ' +
-                                    {010}  'AND IT.IDITCHAMADO = :IDITCHAMADO ';
-
-      VerificaCamposRadioGroup(vStatus, vTipo);
-      vQueryItChamados.ParamByName('IDITCHAMADO').AsInteger := StrToInt(Trim(edtIdChamado.Text));
-      vQueryItChamados.ParamByName('CODCHAMADO').AsInteger  := StrToInt(Trim(edtChamado.Text));
-      vQueryItChamados.ParamByName('DATAINICIO').AsDateTime := StrToDateTIme(edtDataInicial.Text);
-      vQueryItChamados.ParamByName('STATUS').AsString       := vStatus;
-      if (StrToDateTIme(edtHoraIni.Text) > StrToDateTIme(edtHoraFim.Text)) and (edtHoraFim.Text <> '00:00') then
+  TThread.CreateAnonymousThread(
+  procedure()
+  var
+    i, vNumeroCHamado : Integer;
+    vStatus, vTipo : String;
+  begin
+    {$REGION 'Ativa Animação'}
+      TThread.Synchronize(TThread.CurrentThread,
+      procedure()
       begin
-        Application.MessageBox('Hora Inicial maior que Hora Final',
-          'Atenção!', MB_OK + MB_ICONSTOP);
+        AtivaAnimacao;
+      end);
+    {$ENDREGION}
+
+    {$REGION 'Processo Principal'}
+
+      vNumeroCHamado := 0;
+      vQueryChamado.Close;
+      vQueryChamado.Sql.Clear;
+      vQueryChamado.SQL.Add('SELECT C.* FROM CHAMADOS C WHERE C.CODCHAMADO = :CODCHAMADO');
+      vQueryChamado.ParamByName('CODCHAMADO').AsInteger := StrToInt(Trim(edtChamado.Text));
+      vQueryChamado.Open;
+      vQueryChamado.First;
+
+      vNumeroCHamado := vQueryChamado.FieldByName('CODCHAMADO').AsInteger;
+      try
+        if fdConn.InTransaction then
+          fdConn.Rollback;
+
+        fdConn.StartTransaction;
+
+        if (vQueryChamado.RecordCount = 0) AND (not vEditaChamado) then
+        begin
+          vQueryChamado.Close;
+          vQueryChamado.Sql.Clear;
+          vQueryChamado.SQL.Add('INSERT INTO CHAMADOS ( IDCHAMADO, CODCHAMADO, NOMECLIENTE, DESCRICAO ) VALUES ( :IDCHAMADO, :CODCHAMADO, :NOMECLIENTE, :DESCRICAO )');
+          vQueryChamado.ParamByName('IDCHAMADO').AsInteger  := AutoIncremento('CHAMADOS', 'IDCHAMADO');
+          vQueryChamado.ParamByName('DESCRICAO').AsString   := Trim(memoDescricao.Lines.Text);
+          vQueryChamado.ParamByName('CODCHAMADO').AsInteger := StrToInt(Trim(edtChamado.Text));
+          vQueryChamado.ParamByName('NOMECLIENTE').AsString := Trim(edtNomeCliente.Text);
+          vQueryChamado.ExecSQL;
+        end
+        else if (vQueryChamado.RecordCount = 1) AND (vEditaChamado) then
+        begin
+          vQueryChamado.Close;
+          vQueryChamado.Sql.Clear;
+          vQueryChamado.SQL.Add('UPDATE CHAMADOS C SET C.NOMECLIENTE = :NOMECLIENTE, C.DESCRICAO = :DESCRICAO WHERE C.CODCHAMADO = :CODCHAMADO AND C.IDCHAMADO = ' + edtIdChamado.Text);
+          vQueryChamado.ParamByName('CODCHAMADO').AsInteger := vNumeroCHamado;
+          vQueryChamado.ParamByName('NOMECLIENTE').AsString := Trim(edtNomeCliente.Text);
+          vQueryChamado.ParamByName('DESCRICAO').AsString   := Trim(memoDescricao.Lines.Text);
+          vQueryChamado.ExecSQL;
+        end;
+
+        vQueryItChamados.Close;
+        vQueryItChamados.Sql.Clear;
+
+        if (edtDataInicial.Enabled) and (edtIdChamado.Text = '') then
+        Begin
+
+          vQueryItChamados.Sql.Text :=  {000}  'INSERT INTO ITCHAMADO ( IDITCHAMADO,' +
+                                        {001}  'CODCHAMADO, ' +
+                                        {002}  'DATAINICIO, ' +
+                                        {003}  'STATUS, ' +
+                                        {004}  'HORAINICIO, ' +
+                                        {005}  'HORAFIM, ' +
+                                        {006}  'TIPOCHAMADO, ' +
+                                        {007}  'OBS ' +
+
+                                        {000}  ') VALUES( :IDITCHAMADO,' +
+                                        {001}  ':CODCHAMADO, ' +
+                                        {002}  ':DATAINICIO, ' +
+                                        {003}  ':STATUS, ' +
+                                        {004}  ':HORAINICIO, ' +
+                                        {005}  ':HORAFIM, ' +
+                                        {006}  ':TIPOCHAMADO, ' +
+                                        {007}  ':OBS ' +
+                                        {008}  ') ';
+
+          VerificaCamposRadioGroup(vStatus, vTipo);
+          vQueryItChamados.ParamByName('IDITCHAMADO').AsInteger := AutoIncremento('ITCHAMADO', 'IDITCHAMADO');
+          vQueryItChamados.ParamByName('CODCHAMADO').AsInteger  := StrToInt(Trim(edtChamado.Text));
+          vQueryItChamados.ParamByName('DATAINICIO').AsDateTime := StrToDateTIme(edtDataInicial.Text);
+          vQueryItChamados.ParamByName('STATUS').AsString       := vStatus;
+          vQueryItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTIme(edtHoraIni.Text);
+          vQueryItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTIme(edtHoraFim.Text);
+          vQueryItChamados.ParamByName('TIPOCHAMADO').AsString  := vTipo;
+          vQueryItChamados.ParamByName('OBS').AsString          := Trim(memoObs.Lines.Text);
+
+          vQueryItChamados.ExecSQL;
+        End
+        else if vEditaItChamado then
+        begin
+          vQueryItChamados.Sql.Text :=  {000}  'UPDATE ITCHAMADO IT SET IT.CODCHAMADO = :CODCHAMADO, ' +
+                                        {001}  'IT.DATAINICIO = :DATAINICIO, ' +
+                                        {002}  'IT.DATAFIM = :DATAFIM, ' +
+                                        {003}  'IT.STATUS = :STATUS, ' +
+                                        {004}  'IT.HORAINICIO = :HORAINICIO, ' +
+                                        {005}  'IT.HORAFIM = :HORAFIM, ' +
+                                        {007}  'IT.TIPOCHAMADO = :TIPOCHAMADO, ' +
+                                        {008}  'IT.OBS = :OBS ' +
+                                        {009}  'WHERE  IT.CODCHAMADO = :CODCHAMADO  ' +
+                                        {010}  'AND IT.IDITCHAMADO = :IDITCHAMADO ';
+
+          VerificaCamposRadioGroup(vStatus, vTipo);
+          vQueryItChamados.ParamByName('IDITCHAMADO').AsInteger := StrToInt(Trim(edtIdChamado.Text));
+          vQueryItChamados.ParamByName('CODCHAMADO').AsInteger  := StrToInt(Trim(edtChamado.Text));
+          vQueryItChamados.ParamByName('DATAINICIO').AsDateTime := StrToDateTIme(edtDataInicial.Text);
+          vQueryItChamados.ParamByName('STATUS').AsString       := vStatus;
+          if (StrToDateTIme(edtHoraIni.Text) > StrToDateTIme(edtHoraFim.Text)) and (edtHoraFim.Text <> '00:00') then
+          begin
+            Application.MessageBox('Hora Inicial maior que Hora Final',
+              'Atenção!', MB_OK + MB_ICONSTOP);
+            btnLimparCamposClick(nil);
+            Exit;
+          end;
+          vQueryItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTIme(edtHoraIni.Text);
+          vQueryItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTIme(edtHoraFim.Text);
+          vQueryItChamados.ParamByName('TIPOCHAMADO').AsString  := vTipo;
+          vQueryItChamados.ParamByName('OBS').AsString          := Trim(memoObs.Lines.Text);
+
+          vQueryItChamados.ExecSQL;
+        end;
+
+        fdConn.Commit;
+        vQueryItChamados.Close;
+        vQueryChamado.Close;
+
+        vEditaChamado := False;
+        vEditaItChamado := True;
+
+    //    HabilitaDesabilitaCampos;
         btnLimparCamposClick(nil);
-        Exit;
+
+        FormShow(self);
+
+      Except
+        on E:Exception do
+        begin
+          ShowMessage('Erro: ' + e.Message);
+          fdConn.Rollback;
+        end;
       end;
-      vQueryItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTIme(edtHoraIni.Text);
-      vQueryItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTIme(edtHoraFim.Text);
-      vQueryItChamados.ParamByName('TIPOCHAMADO').AsString  := vTipo;
-      vQueryItChamados.ParamByName('OBS').AsString          := Trim(memoObs.Lines.Text);
+    {$ENDREGION}
 
-      vQueryItChamados.ExecSQL;
-    end;
-
-    fdConn.Commit;
-    vQueryItChamados.Close;
-    vQueryChamado.Close;
-
-    vEditaChamado := False;
-    vEditaItChamado := True;
-
-//    HabilitaDesabilitaCampos;
-    btnLimparCamposClick(nil);
-
-    FormShow(self);
-
-  Except
-    on E:Exception do
-    begin
-      ShowMessage('Erro: ' + e.Message);
-      fdConn.Rollback;
-    end;
-  end;
+    {$REGION 'Desativa Animação'}
+      TThread.Synchronize(TThread.CurrentThread,
+      procedure()
+      begin
+        DesativaAnimacao;
+      end);
+    {$ENDREGION}
+  end).Start;
 end;
 
 procedure TfrPrincipal.btnLimparCamposClick(Sender: TObject);
@@ -739,6 +799,8 @@ var
   QrConsulta, vQueryInserirChamado, vQueryInserirItChamados : TFDQuery;
   I : Integer;
 begin
+
+
   Gauge1.Progress := 0;
   // importar dados da planilha
   QrConsulta := TFDQuery.Create(nil);
@@ -771,11 +833,11 @@ begin
   QrConsulta.Open;
   QrConsulta.First;
 
-  Gauge1.MinValue := 0;
-  Gauge1.MaxValue := QrConsulta.RecordCount;
+  Gauge1.MinValue           := 0;
+  Gauge1.MaxValue           := QrConsulta.RecordCount;
   TaskBar1.ProgressMaxValue := QrConsulta.RecordCount;
-  TaskBar1.ProgressState := TTaskBarProgressState.Normal;
-  Gauge1.Visible  := True;
+  TaskBar1.ProgressState    := TTaskBarProgressState.Normal;
+  Gauge1.Visible            := True;
 
   vQueryInserirChamado := TFDQuery.Create(nil);
   vQueryInserirChamado.Connection := fdConn;
@@ -899,15 +961,17 @@ begin
         Break;
       end;
     end;
-    Gauge1.Progress := Gauge1.Progress +1;
+    Gauge1.Progress        := Gauge1.Progress +1;
     TaskBar1.ProgressValue := TaskBar1.ProgressValue + 1;
     Application.ProcessMessages;
   end;
-  Gauge1.Visible := False;
+  Gauge1.Visible         := False;
   TaskBar1.ProgressValue := 0;
   QrConsulta.Free;
   vQueryInserirChamado.Free;
   vQueryInserirItChamados.Free;
+
+  btnRestaurarClick(nil);
 end;
 
 procedure TfrPrincipal.dbgChamadosTitleClick(Column: TColumn);
@@ -1019,6 +1083,27 @@ begin
       'Ç': str[i] := 'C';
     end;
   Result := str;
+end;
+
+procedure TfrPrincipal.AtivaAnimacao;
+begin
+  pnlLoading.Visible := True;
+  aiLoading.Visible  := True;
+  aiLoading.Animate  := True;
+
+  pnlLoading.Top    := 0;
+  pnlLoading.Left   := 0;
+  pnlLoading.Height := frPrincipal.ClientHeight;
+  pnlLoading.Width  := frPrincipal.ClientWidth;
+  aiLoading.Left    := Trunc((pnlLoading.Width / 2) - (aiLoading.Width / 2));
+  aiLoading.Top     := Trunc((pnlLoading.Height / 2) - (aiLoading.Height / 2));
+end;
+
+procedure TfrPrincipal.DesativaAnimacao;
+begin
+  pnlLoading.Visible := False;
+  aiLoading.Visible := False;
+  aiLoading.Animate := False;
 end;
 
 procedure TfrPrincipal.btnRestaurarClick(Sender: TObject);

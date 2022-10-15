@@ -12,7 +12,6 @@ object frPrincipal: TfrPrincipal
   Font.Name = 'Tahoma'
   Font.Style = []
   KeyPreview = True
-  OldCreateOrder = False
   Position = poScreenCenter
   OnKeyPress = FormKeyPress
   OnShow = FormShow
@@ -192,6 +191,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Height = 13
       EditLabel.Caption = 'Cliente'
       TabOrder = 0
+      Text = ''
     end
     object edtDataInicial: TMaskEdit
       Left = 153
@@ -215,6 +215,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Height = 13
       EditLabel.Caption = 'Chamado'
       TabOrder = 2
+      Text = ''
     end
     object memoDescricao: TMemo
       Left = 537
@@ -299,6 +300,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Height = 13
       EditLabel.Caption = 'Pesquisa'
       TabOrder = 11
+      Text = ''
     end
     object edtIdChamado: TLabeledEdit
       Left = 24
@@ -311,6 +313,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Caption = 'Id Chamado'
       Enabled = False
       TabOrder = 13
+      Text = ''
     end
     object btnImportar: TButton
       Left = 208
@@ -378,7 +381,7 @@ object frPrincipal: TfrPrincipal
     end
     object btnPesquisar: TButton
       Left = 785
-      Top = 232
+      Top = 235
       Width = 118
       Height = 32
       Anchors = [akTop, akRight]
@@ -408,6 +411,22 @@ object frPrincipal: TfrPrincipal
       EditLabel.Caption = 'Total Horas'
       ReadOnly = True
       TabOrder = 0
+      Text = ''
+    end
+  end
+  object pnlLoading: TPanel
+    Left = 398
+    Top = 528
+    Width = 195
+    Height = 121
+    Caption = 'pnlLoading'
+    ShowCaption = False
+    TabOrder = 4
+    object aiLoading: TActivityIndicator
+      Left = 72
+      Top = 24
+      FrameDelay = 20
+      IndicatorSize = aisXLarge
     end
   end
   object vQueryChamado: TFDQuery
@@ -496,12 +515,13 @@ object frPrincipal: TfrPrincipal
   object fdConn: TFDConnection
     Params.Strings = (
       
-        'Database=D:\Bibliotecas\Desktop\Controle de Chamados\BD\CHAMADOS' +
-        '.FDB'
-      'User_Name=sysdba'
+        'Database=E:\FontesSVN\Outros\Controle-de-Chamados\BD\CHAMADOS.FD' +
+        'B'
+      'User_Name=SYSDBA'
       'Password=Msol1000'
+      'CharacterSet=WIN1254'
       'DriverID=IB')
-    Left = 552
+    Left = 504
     Top = 288
   end
   object FDSchemaAdapter1: TFDSchemaAdapter
@@ -524,8 +544,8 @@ object frPrincipal: TfrPrincipal
   object fdConnOrigem: TFDConnection
     Params.Strings = (
       
-        'Database=D:\Bibliotecas\Desktop\Controle de Chamados\DadosAntigo' +
-        's\bd.mdb'
+        'Database=E:\FontesSVN\Outros\Controle-de-Chamados\DadosAntigos\b' +
+        'd.mdb'
       'DriverID=MSAcc')
     Left = 576
     Top = 368
