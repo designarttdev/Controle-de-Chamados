@@ -165,7 +165,7 @@ begin
 
         dbgMestreDetalhe.SelectedField := dbgMestreDetalhe.Columns[0].Field;
         dbgChamados.SelectedField      := dbgChamados.Columns[0].Field;
-        dbgChamados.SetFocus;
+        edtChamado.SetFocus;
 
       {$ENDREGION}
 
