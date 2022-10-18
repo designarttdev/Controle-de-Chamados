@@ -70,8 +70,6 @@ type
     btnRestaurar: TButton;
     btnPesquisar: TButton;
     Taskbar1: TTaskbar;
-    pnlLoading: TPanel;
-    aiLoading: TActivityIndicator;
     procedure btnFinalizarClick(Sender: TObject);
     procedure btnGravarClick(Sender: TObject);
     procedure btnLimparCamposClick(Sender: TObject);
@@ -101,8 +99,6 @@ type
     procedure LimpaCampos;
     procedure ConsultaChamados;
     function AnsiToAscii(str: String): String;
-    procedure AtivaAnimacao;
-    procedure DesativaAnimacao;
     { Private declarations }
   public
     { Public declarations }
@@ -113,21 +109,31 @@ var
 
 implementation
 
+uses
+  Funcoes;
+
 {$R *.dfm}
 
 procedure TfrPrincipal.FormShow(Sender: TObject);
+var
+  vPainelLoading : TPanel;
+  vAnimacaoLoading: TactivityIndicator;
 begin
   {$REGION 'Processo Principal'}
 
     TThread.CreateAnonymousThread(
     procedure()
+    var
+      vPainelLoading : TPanel;
+      vAnimacaoLoading: TactivityIndicator;
     begin
 
       {$REGION 'Ativa Animação'}
         TThread.Synchronize(TThread.CurrentThread,
         procedure()
         begin
-          AtivaAnimacao;
+          vPainelLoading   := frFuncoes.RetornaPanel(frPrincipal);
+          vAnimacaoLoading := frFuncoes.RetornaAiLoading(frprincipal);
         end);
       {$ENDREGION}
 
@@ -173,7 +179,7 @@ begin
         TThread.Synchronize(TThread.CurrentThread,
         procedure()
         begin
-          DesativaAnimacao;
+          frfuncoes.FechaCarregamento;
         end);
       {$ENDREGION}
 
@@ -448,12 +454,15 @@ begin
   var
     i, vNumeroCHamado : Integer;
     vStatus, vTipo : String;
+    vPainelLoading : TPanel;
+    vAnimacaoLoading: TactivityIndicator;
   begin
     {$REGION 'Ativa Animação'}
       TThread.Synchronize(TThread.CurrentThread,
       procedure()
       begin
-        AtivaAnimacao;
+        vPainelLoading   := FrFuncoes.RetornaPanel(frPrincipal);
+        vAnimacaoLoading := frfuncoes.RetornaAiLoading(frprincipal);
       end);
     {$ENDREGION}
 
@@ -591,7 +600,7 @@ begin
       TThread.Synchronize(TThread.CurrentThread,
       procedure()
       begin
-        DesativaAnimacao;
+        frFuncoes.FechaCarregamento;
       end);
     {$ENDREGION}
   end).Start;
@@ -1083,27 +1092,6 @@ begin
       'Ç': str[i] := 'C';
     end;
   Result := str;
-end;
-
-procedure TfrPrincipal.AtivaAnimacao;
-begin
-  pnlLoading.Visible := True;
-  aiLoading.Visible  := True;
-  aiLoading.Animate  := True;
-
-  pnlLoading.Top    := 0;
-  pnlLoading.Left   := 0;
-  pnlLoading.Height := frPrincipal.ClientHeight;
-  pnlLoading.Width  := frPrincipal.ClientWidth;
-  aiLoading.Left    := Trunc((pnlLoading.Width / 2) - (aiLoading.Width / 2));
-  aiLoading.Top     := Trunc((pnlLoading.Height / 2) - (aiLoading.Height / 2));
-end;
-
-procedure TfrPrincipal.DesativaAnimacao;
-begin
-  pnlLoading.Visible := False;
-  aiLoading.Visible := False;
-  aiLoading.Animate := False;
 end;
 
 procedure TfrPrincipal.btnRestaurarClick(Sender: TObject);
