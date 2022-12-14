@@ -3,17 +3,17 @@ unit Principal;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
-  Vcl.Mask, Data.DB, Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Intf,
-  FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS,
-  FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt,
-  FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.UI.Intf, FireDAC.Stan.Def,
-  FireDAC.Stan.Pool, FireDAC.Phys, FireDAC.Phys.IB, FireDAC.Phys.IBDef,
-  FireDAC.VCLUI.Wait, Vcl.Menus, System.MaskUtils, FireDAC.Phys.MSAcc,
-  FireDAC.Phys.MSAccDef, StrUtils, Vcl.Samples.Gauges, Vcl.Buttons,
-  System.ImageList, Vcl.ImgList, System.Win.TaskbarCore, Vcl.Taskbar,
-  Vcl.WinXCtrls;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Mask, Data.DB, Vcl.Grids,
+  Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  FireDAC.UI.Intf, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Phys,
+  FireDAC.Phys.IB, FireDAC.Phys.IBDef, FireDAC.VCLUI.Wait, Vcl.Menus,
+  System.MaskUtils, FireDAC.Phys.MSAcc, FireDAC.Phys.MSAccDef, StrUtils,
+  Vcl.Samples.Gauges, Vcl.Buttons, System.ImageList, Vcl.ImgList,
+  System.Win.TaskbarCore, Vcl.Taskbar, Vcl.WinXCtrls;
 
 type
   TfrPrincipal = class(TForm)
@@ -77,8 +77,7 @@ type
     procedure dbgChamadosDblClick(Sender: TObject);
     procedure dbgMestreDetalheCellClick(Column: TColumn);
     procedure dbgMestreDetalheDblClick(Sender: TObject);
-    procedure dbgMestreDetalheDrawColumnCell(Sender: TObject; const Rect: TRect;
-        DataCol: Integer; Column: TColumn; State: TGridDrawState);
+    procedure dbgMestreDetalheDrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
     procedure btnDuplicarClick(Sender: TObject);
     procedure btnImportarClick(Sender: TObject);
     procedure btnPesquisarClick(Sender: TObject);
@@ -87,18 +86,19 @@ type
     procedure FormKeyPress(Sender: TObject; var Key: Char);
     procedure FormShow(Sender: TObject);
   private
-    vTotHoras : Double;
-    vChamado : String;
-    vEditaChamado, vEditaItChamado, vHabilitaAll, vOrdenouDesc : Boolean;
-    vNomeCampoSelecionado : String;
+    vTotHoras: Double;
+    vChamado: string;
+    vEditaChamado, vEditaItChamado, vHabilitaAll, vOrdenouDesc: Boolean;
+    vNomeCampoSelecionado: string;
     procedure AjustarColunas(DBGrid: TDBgrid);
-    Function MinparaHora(Minuto: Double): string;
-    function AutoIncremento(vNomeTabela, vNomeCampoTabela : String) : Integer;
+    function MinparaHora(Minuto: Double): string;
+    function AutoIncremento(vNomeTabela, vNomeCampoTabela: string): Integer;
     procedure HabilitaDesabilitaCampos;
     procedure VerificaCamposRadioGroup(var vStatus: string; var vTipo: string);
     procedure LimpaCampos;
     procedure ConsultaChamados;
-    function AnsiToAscii(str: String): String;
+    function AnsiToAscii(str: string): string;
+    procedure CalculaTotaisHoras(TipoIdChamado: String);
     { Private declarations }
   public
     { Public declarations }
@@ -116,20 +116,20 @@ uses
 
 procedure TfrPrincipal.FormShow(Sender: TObject);
 var
-  vPainelLoading : TPanel;
+  vPainelLoading: TPanel;
   vAnimacaoLoading: TactivityIndicator;
 begin
   {$REGION 'Processo Principal'}
 
-    TThread.CreateAnonymousThread(
+  TThread.CreateAnonymousThread(
     procedure()
     var
-      vPainelLoading : TPanel;
+      vPainelLoading: TPanel;
       vAnimacaoLoading: TactivityIndicator;
     begin
 
       {$REGION 'Ativa Animação'}
-        TThread.Synchronize(TThread.CurrentThread,
+      TThread.Synchronize(TThread.CurrentThread,
         procedure()
         begin
           vPainelLoading   := frFuncoes.RetornaPanel(frPrincipal);
@@ -139,44 +139,46 @@ begin
 
       {$REGION ' Processo Principal '}
 
-        vTotHoras := 0;
+      vTotHoras := 0;
 
-        fdConn.Connected := True;
+      fdConn.Params.Database := ExtractFilePath(Application.ExeName) + 'BD\CHAMADOS.FDB';
 
-        ConsultaChamados;
+      fdConn.Connected := True;
 
-        vQueryChamado.SQL.Add('ORDER BY C.IDCHAMADO --DESC');
+      ConsultaChamados;
 
-        vQueryChamado.Open;
-        vQueryChamado.First;
+      vQueryChamado.SQL.Add('ORDER BY C.IDCHAMADO --DESC');
 
-        vQueryItChamados.Close;
-        vQueryItChamados.Sql.Clear;
-        vQueryItChamados.SQL.Add('SELECT IT.IDITCHAMADO, IT.CODCHAMADO, IT.DATAINICIO, IT.DATAFIM, IT.STATUS, IT.HORAINICIO, IT.HORAFIM, IT.TIPOCHAMADO, IT.OBS');
-        vQueryItChamados.SQL.Add('FROM ITCHAMADO IT --WHERE IT.CODCHAMADO = :CODCHAMADO');
-        vQueryItChamados.SQL.Add('ORDER BY IT.IDITCHAMADO DESC');
-        vQueryItChamados.Open;
-        vQueryItChamados.First;
+      vQueryChamado.Open;
+      vQueryChamado.First;
 
-        AjustarColunas(dbgChamados);
-        AjustarColunas(dbgMestreDetalhe);
+      vQueryItChamados.Close;
+      vQueryItChamados.Sql.Clear;
+      vQueryItChamados.SQL.Add('SELECT IT.IDITCHAMADO, IT.CODCHAMADO, IT.DATAINICIO, IT.DATAFIM, IT.STATUS, IT.HORAINICIO, IT.HORAFIM, IT.TIPOCHAMADO, IT.OBS');
+      vQueryItChamados.SQL.Add('FROM ITCHAMADO IT --WHERE IT.CODCHAMADO = :CODCHAMADO');
+      vQueryItChamados.SQL.Add('ORDER BY IT.IDITCHAMADO DESC');
+      vQueryItChamados.Open;
+      vQueryItChamados.First;
 
-        edtDataInicial.Text := DateTimeToStr(Date);
+      AjustarColunas(dbgChamados);
+      AjustarColunas(dbgMestreDetalhe);
 
-        vEditaChamado   := False;
-        vEditaItChamado := False;
-        vHabilitaAll    := True;
-        HabilitaDesabilitaCampos;
-        vHabilitaAll    := False;
+      edtDataInicial.Text := DateTimeToStr(Date);
 
-        dbgMestreDetalhe.SelectedField := dbgMestreDetalhe.Columns[0].Field;
-        dbgChamados.SelectedField      := dbgChamados.Columns[0].Field;
-        edtChamado.SetFocus;
+      vEditaChamado   := False;
+      vEditaItChamado := False;
+      vHabilitaAll    := True;
+      HabilitaDesabilitaCampos;
+      vHabilitaAll    := False;
+
+      dbgMestreDetalhe.SelectedField := dbgMestreDetalhe.Columns[0].Field;
+      dbgChamados.SelectedField      := dbgChamados.Columns[0].Field;
+      edtChamado.SetFocus;
 
       {$ENDREGION}
 
       {$REGION 'Desativa Animação'}
-        TThread.Synchronize(TThread.CurrentThread,
+      TThread.Synchronize(TThread.CurrentThread,
         procedure()
         begin
           frfuncoes.FechaCarregamento;
@@ -185,36 +187,41 @@ begin
 
     end).Start;
 
+    edtChamado.SetFocus;
+    edtChamado.SelectAll;
+
   {$ENDREGION}
 end;
 
-procedure TfrPrincipal.AjustarColunas(DBGrid : TDBgrid);
+procedure TfrPrincipal.AjustarColunas(DBGrid: TDBgrid);
 var
-  ColumnCount, RowCount : integer;
-  DataSetTemp           : TDataSet;
-  DataSourceTemp        : TDataSource;
-  contCol, contRow      : integer;
-  AValue                : integer;
-  MStrValue, AStrValue  : string;
+  ColumnCount, RowCount: integer;
+  DataSetTemp: TDataSet;
+  DataSourceTemp: TDataSource;
+  contCol, contRow: integer;
+  AValue: integer;
+  MStrValue, AStrValue: string;
 begin
   //captura colunas do dbgrid
   ColumnCount := DBGrid.Columns.Count;
   //verifica se existem colunas
-  if (ColumnCount = 0) then Exit;
+  if (ColumnCount = 0) then
+    Exit;
   //verifica se o TDataSet do DataSource referenciado no DBGrid está ativo (haha)
-  if not DBGrid.DataSource.DataSet.Active  then Exit;
+  if not DBGrid.DataSource.DataSet.Active then
+    Exit;
 
   //captura em variáveis temporárias o dataset e datasource, e também a quantidade de linhas que sua query retornou no record count
-  DataSetTemp    := DBGrid.DataSource.DataSet;
+  DataSetTemp := DBGrid.DataSource.DataSet;
   DataSourceTemp := DBGrid.DataSource;
   //esta instrução foi feita para evitar que o usuário veja o processo de redimensionamento do dbgrid.
   DBGrid.DataSource := nil;
-  RowCount          := DataSetTemp.RecordCount;
+  RowCount := DataSetTemp.RecordCount;
 
   //varre todas as colunas do dbgrid
-  for contCol := 0 to ColumnCount-1 do
+  for contCol := 0 to ColumnCount - 1 do
   begin
-    AValue    := 0;
+    AValue := 0;
     AStrValue := '';
 
     DataSetTemp.First;
@@ -223,7 +230,7 @@ begin
     while not DataSetTemp.Eof do
     begin
     //captura valor e o length do campo atual
-      AValue    := Length(DataSetTemp.FieldByName(DBGrid.Columns[contCol].FieldName).AsString);
+      AValue := Length(DataSetTemp.FieldByName(DBGrid.Columns[contCol].FieldName).AsString);
       AStrValue := DataSetTemp.FieldByName(DBGrid.Columns[contCol].FieldName).AsString;
       DataSetTemp.Next;
 
@@ -236,20 +243,19 @@ begin
     //seta a largura atual com o tamanho do campo maior capturado
     //anteriormente (Observe que há uma conversão de texto para Width,
     //isto é para capturar o valor real da largura do texto.)
-    DBGrid.Columns[contCol].Width := DBGrid.Canvas.TextWidth(MStrValue)+25;
+    DBGrid.Columns[contCol].Width := DBGrid.Canvas.TextWidth(MStrValue) + 25;
   end;
 
   //DataSource novamente referenciado, para evitar Acess Violation.
   DBGrid.DataSource := DataSourceTemp;
 end;
 
-function TfrPrincipal.AutoIncremento(vNomeTabela,
-  vNomeCampoTabela: String): Integer;
+function TfrPrincipal.AutoIncremento(vNomeTabela, vNomeCampoTabela: string): Integer;
 var
-  vQueryAux : TFDQuery;
+  vQueryAux: TFDQuery;
 begin
   vQueryAux := TFDQuery.Create(nil);
-  vqueryAux.Connection := fdConn;
+  vQueryAux.Connection := fdConn;
 
   vQueryAux.Close;
   vQueryAux.Sql.Clear;
@@ -266,15 +272,14 @@ end;
 
 procedure TfrPrincipal.btnFinalizarClick(Sender: TObject);
 var
-  i, vNumeroCHamado : Integer;
-  vStatus, vTipo, vHoraInicioF, vHoraFimF : String;
-  vHoraIni, vHoraFim : TDateTime;
+  i, vNumeroCHamado: Integer;
+  vStatus, vTipo, vHoraInicioF, vHoraFimF: string;
+  vHoraIni, vHoraFim: TDateTime;
 begin
   vNumeroCHamado := 0;
   if Trim(edtChamado.Text) = '' then
   begin
-    Application.MessageBox('Favor informar um pedido!', 'Atenção!', MB_OK +
-      MB_ICONWARNING);
+    Application.MessageBox('Favor informar um pedido!', 'Atenção!', MB_OK + MB_ICONWARNING);
     dbgMestreDetalhe.SetFocus;
     Exit;
   end;
@@ -313,8 +318,7 @@ begin
 
           if StrToDateTime(FormatDateTime('hh:MM', vQueryItChamados.ParamByName('HORAFIM').AsDateTime)) < StrToDateTime(FormatDateTime('hh:MM', vHoraIni)) then
           begin
-            Application.MessageBox('Hora Inicial maior que Hora Final',
-              'Atenção!', MB_OK + MB_ICONSTOP);
+            Application.MessageBox('Hora Inicial maior que Hora Final', 'Atenção!', MB_OK + MB_ICONSTOP);
             btnLimparCamposClick(nil);
             Exit;
           end;
@@ -341,8 +345,8 @@ begin
 
       FormShow(self);
 
-    Except
-      on E:Exception do
+    except
+      on E: Exception do
       begin
         ShowMessage('Erro: ' + e.Message);
         fdConn.Rollback;
@@ -353,31 +357,33 @@ end;
 
 procedure TfrPrincipal.HabilitaDesabilitaCampos;
 begin
-  if vEditaChamado then
-  begin
-    edtDataInicial.Enabled := False;
-    rgStatus.Enabled       := False;
-    rgTipoChamado.Enabled  := False;
-    memoDescricao.Enabled  := True;
-    memoObs.Enabled        := False;
-    edtHoraIni.Enabled     := False;
-    edtHoraFim.Enabled     := False;
-    edtPesquisa.Enabled    := False;
-    edtNomeCliente.Enabled := True;
-  end
-  else if vEditaItChamado then
-  begin
-    edtDataInicial.Enabled := True;
-    rgStatus.Enabled       := True;
-    rgTipoChamado.Enabled  := True;
-    edtHoraIni.Enabled     := True;
-    edtHoraFim.Enabled     := True;
-    edtPesquisa.Enabled    := True;
-    memoObs.Enabled        := True;
-    memoDescricao.Enabled  := False;
-    edtNomeCliente.Enabled := False;
-  end
-  else if vHabilitaAll then
+//  if vEditaChamado then
+//  begin
+//    edtDataInicial.Enabled := False;
+//    rgStatus.Enabled       := False;
+//    rgTipoChamado.Enabled  := False;
+//    memoDescricao.Enabled  := True;
+//    memoObs.Enabled        := False;
+//    edtHoraIni.Enabled     := False;
+//    edtHoraFim.Enabled     := False;
+//    edtPesquisa.Enabled    := False;
+//    edtNomeCliente.Enabled := True;
+//  end
+//  else
+//  if vEditaItChamado then
+//  begin
+//    edtDataInicial.Enabled := True;
+//    rgStatus.Enabled       := True;
+//    rgTipoChamado.Enabled  := True;
+//    edtHoraIni.Enabled     := True;
+//    edtHoraFim.Enabled     := True;
+//    edtPesquisa.Enabled    := True;
+//    memoObs.Enabled        := True;
+//    memoDescricao.Enabled  := False;
+//    edtNomeCliente.Enabled := False;
+//  end
+//  else
+  if vHabilitaAll then
   begin
     edtDataInicial.Enabled := True;
     rgStatus.Enabled       := True;
@@ -412,11 +418,11 @@ end;
 procedure TfrPrincipal.LimpaCampos;
 begin
   // habilita campos novamente
-  vEditaChamado           := False;
-  vEditaItChamado         := True;
+  vEditaChamado   := True;
+  vEditaItChamado := False;
   HabilitaDesabilitaCampos;
-  vEditaItChamado         := False;
-  vEditaChamado           := False;
+  vEditaItChamado := False;
+  vEditaChamado   := False;
   // ------
 
   edtChamado.Text         := '';
@@ -446,24 +452,24 @@ end;
 
 procedure TfrPrincipal.btnGravarClick(Sender: TObject);
 var
-  i, vNumeroCHamado : Integer;
-  vStatus, vTipo : String;
+  i, vNumeroCHamado: Integer;
+  vStatus, vTipo: string;
 begin
   TThread.CreateAnonymousThread(
-  procedure()
-  var
-    i, vNumeroCHamado : Integer;
-    vStatus, vTipo : String;
-    vPainelLoading : TPanel;
-    vAnimacaoLoading: TactivityIndicator;
-  begin
+    procedure()
+    var
+      i, vNumeroCHamado: Integer;
+      vStatus, vTipo: string;
+      vPainelLoading: TPanel;
+      vAnimacaoLoading: TactivityIndicator;
+    begin
     {$REGION 'Ativa Animação'}
       TThread.Synchronize(TThread.CurrentThread,
-      procedure()
-      begin
-        vPainelLoading   := FrFuncoes.RetornaPanel(frPrincipal);
-        vAnimacaoLoading := frfuncoes.RetornaAiLoading(frprincipal);
-      end);
+        procedure()
+        begin
+          vPainelLoading   := FrFuncoes.RetornaPanel(frPrincipal);
+          vAnimacaoLoading := frfuncoes.RetornaAiLoading(frprincipal);
+        end);
     {$ENDREGION}
 
     {$REGION 'Processo Principal'}
@@ -483,7 +489,7 @@ begin
 
         fdConn.StartTransaction;
 
-        if (vQueryChamado.RecordCount = 0) AND (not vEditaChamado) then
+        if (vQueryChamado.RecordCount = 0) and (not vEditaChamado) then
         begin
           vQueryChamado.Close;
           vQueryChamado.Sql.Clear;
@@ -494,7 +500,7 @@ begin
           vQueryChamado.ParamByName('NOMECLIENTE').AsString := Trim(edtNomeCliente.Text);
           vQueryChamado.ExecSQL;
         end
-        else if (vQueryChamado.RecordCount = 1) AND (vEditaChamado) then
+        else if (vQueryChamado.RecordCount = 1) and (vEditaChamado) then
         begin
           vQueryChamado.Close;
           vQueryChamado.Sql.Clear;
@@ -509,7 +515,7 @@ begin
         vQueryItChamados.Sql.Clear;
 
         if (edtDataInicial.Enabled) and (edtIdChamado.Text = '') then
-        Begin
+        begin
 
           vQueryItChamados.Sql.Text :=  {000}  'INSERT INTO ITCHAMADO ( IDITCHAMADO,' +
                                         {001}  'CODCHAMADO, ' +
@@ -541,7 +547,7 @@ begin
           vQueryItChamados.ParamByName('OBS').AsString          := Trim(memoObs.Lines.Text);
 
           vQueryItChamados.ExecSQL;
-        End
+        end
         else if vEditaItChamado then
         begin
           vQueryItChamados.Sql.Text :=  {000}  'UPDATE ITCHAMADO IT SET IT.CODCHAMADO = :CODCHAMADO, ' +
@@ -562,8 +568,7 @@ begin
           vQueryItChamados.ParamByName('STATUS').AsString       := vStatus;
           if (StrToDateTIme(edtHoraIni.Text) > StrToDateTIme(edtHoraFim.Text)) and (edtHoraFim.Text <> '00:00') then
           begin
-            Application.MessageBox('Hora Inicial maior que Hora Final',
-              'Atenção!', MB_OK + MB_ICONSTOP);
+            Application.MessageBox('Hora Inicial maior que Hora Final', 'Atenção!', MB_OK + MB_ICONSTOP);
             btnLimparCamposClick(nil);
             Exit;
           end;
@@ -587,8 +592,8 @@ begin
 
         FormShow(self);
 
-      Except
-        on E:Exception do
+      except
+        on E: Exception do
         begin
           ShowMessage('Erro: ' + e.Message);
           fdConn.Rollback;
@@ -598,12 +603,12 @@ begin
 
     {$REGION 'Desativa Animação'}
       TThread.Synchronize(TThread.CurrentThread,
-      procedure()
-      begin
-        frFuncoes.FechaCarregamento;
-      end);
+        procedure()
+        begin
+          frFuncoes.FechaCarregamento;
+        end);
     {$ENDREGION}
-  end).Start;
+    end).Start;
 end;
 
 procedure TfrPrincipal.btnLimparCamposClick(Sender: TObject);
@@ -621,11 +626,13 @@ begin
   vQueryItChamados.SQL.Add('ORDER BY IT.IDITCHAMADO DESC');
   vQueryItChamados.ParamByName('CODCHAMADO').AsInteger := StrToInt(dbgChamados.Columns.Items[1].Field.Text);
   vQueryItChamados.Open;
+  vQueryItChamados.First;
 
   if dbgChamados.Columns.Items[1].Field.Text <> vChamado then
   begin
     vTotHoras := 0;
-    vChamado := '';
+    vChamado  := '';
+    CalculaTotaisHoras('VÁRIOS');
   end;
 end;
 
@@ -653,33 +660,22 @@ end;
 
 procedure TfrPrincipal.dbgMestreDetalheCellClick(Column: TColumn);
 var
-  vAux : Double;
-  i : integer;
+  vAux: Double;
+  i: integer;
 begin
 
   if dbgMestreDetalhe.SelectedRows.Count = 1 then
     vTotHoras := 0;
 
-  vQuery.Close;
-  vQuery.Sql.Clear;
-  vQuery.SQL.Add('SELECT DATEDIFF(MINUTE, CAST(IT.HORAINICIO AS TIME), CAST(IT.HORAFIM AS TIME) ) AS DIFERENCA');
-  vQuery.SQL.Add('FROM ITCHAMADO IT WHERE IT.IDITCHAMADO = :IDCHAMADO');
-  vQuery.ParamByName('IDCHAMADO').AsInteger := StrToInt(dbgMestreDetalhe.Columns.Items[0].Field.Text);
-  vQuery.Open;
+  CalculaTotaisHoras('UNICO');
 
-  if (Length(vQueryItChamadosHORAFIM.AsString) = 10) or (vQuery.FieldByName('DIFERENCA').AsFloat < 0) then
-    vTotHoras := 0
-  else
-    vTotHoras := vTotHoras + StrToFloat(MinparaHora(vQuery.FieldByName('DIFERENCA').AsFloat));
-
-  edtTotalHoras.Text := FormatFloat('00.00', vTotHoras).Replace(',', ':');
 //  edtTotalHoras.Text := FormatMaskText('##:##;0;_', FloatToStr(vTotHoras)); // com máscara porém fica com uma vírgula
 //  edtTotalHoras.Text := FloatToStr(vTotHoras).Replace(',', ':');
 end;
 
 procedure TfrPrincipal.dbgMestreDetalheDblClick(Sender: TObject);
 var
-  vStatus, vTipo : String;
+  vStatus, vTipo: string;
 begin
   LimpaCampos;
 
@@ -703,28 +699,27 @@ begin
 
   vTipo := Trim(dbgMestreDetalhe.Columns.Items[5].Field.Text);
   if vTipo = 'SEM CLASSIFICAÇÃO' then
-  	rgTipoChamado.ItemIndex := 0
+    rgTipoChamado.ItemIndex := 0
   else if vTipo = 'BAIXA' then
-  	rgTipoChamado.ItemIndex := 1
+    rgTipoChamado.ItemIndex := 1
   else if vTipo = 'NORMAL' then
-  	rgTipoChamado.ItemIndex := 2
+    rgTipoChamado.ItemIndex := 2
   else if vTipo = 'ALTA' then
-  	rgTipoChamado.ItemIndex := 3
+    rgTipoChamado.ItemIndex := 3
   else if vTipo = 'URGENTE' then
-  	rgTipoChamado.ItemIndex := 4;
+    rgTipoChamado.ItemIndex := 4;
 
   edtHoraIni.Text := FormatDateTime('hh:mm', StrToDateTime(dbgMestreDetalhe.Columns.Items[6].Field.Text));
   if Length(vQueryItChamadosHORAFIM.AsString) = 10 then
     edtHoraFim.Text := '00:00'
   else
     edtHoraFim.Text := FormatDateTime('hh:mm', StrToDateTime(dbgMestreDetalhe.Columns.Items[7].Field.Text));
-  memoObs.Text    := Trim(dbgMestreDetalhe.Columns.Items[8].Field.Text);
+  memoObs.Text := Trim(dbgMestreDetalhe.Columns.Items[8].Field.Text);
 
   HabilitaDesabilitaCampos;
 end;
 
-procedure TfrPrincipal.dbgMestreDetalheDrawColumnCell(Sender: TObject; const
-    Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
+procedure TfrPrincipal.dbgMestreDetalheDrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
 begin
   if dbgMestreDetalhe.Columns.Items[4].Field.Text = 'F' then
   begin
@@ -793,8 +788,8 @@ begin
 
     FormShow(self);
 
-  Except
-    on E:Exception do
+  except
+    on E: Exception do
     begin
       ShowMessage('Erro: ' + e.Message);
       fdConn.Rollback;
@@ -805,11 +800,11 @@ end;
 
 procedure TfrPrincipal.btnImportarClick(Sender: TObject);
 var
-  QrConsulta, vQueryInserirChamado, vQueryInserirItChamados : TFDQuery;
-  I : Integer;
+  QrConsulta, vQueryInserirChamado, vQueryInserirItChamados: TFDQuery;
+  I: Integer;
 begin
 
-
+  fdConnOrigem.Params.DataBase := ExtractFilePath(Application.ExeName) + 'DadosAntigos\bd.mdb';
   Gauge1.Progress := 0;
   // importar dados da planilha
   QrConsulta := TFDQuery.Create(nil);
@@ -817,27 +812,27 @@ begin
   QrConsulta.Close;
   QrConsulta.Sql.Clear;
   QrConsulta.Sql.Text := 'SELECT ' + sLineBreak
-                      + 'DTINICIO, ' + sLineBreak
-                      + 'DTFIM, ' + sLineBreak
-                      + 'CHAMADOS, ' + sLineBreak
-                      + 'STATUS, ' + sLineBreak
-                      + 'HINICIO1, ' + sLineBreak
-                      + 'PAUSA1, ' + sLineBreak
-                      + 'HINICIO2, ' + sLineBreak
-                      + 'PAUSA2, ' + sLineBreak
-                      + 'HINICIO3, ' + sLineBreak
-                      + 'PAUSA3, ' + sLineBreak
-                      + 'HINICIO4, ' + sLineBreak
-                      + 'PAUSA4, ' + sLineBreak
-                      + 'HINICIO5, ' + sLineBreak
-                      + 'PAUSA5, ' + sLineBreak
-                      + 'TOTHORAS, ' + sLineBreak
-                      + 'CLIENTE, ' + sLineBreak
-                      + 'DESCRICAO, ' + sLineBreak
-                      + 'TIPO, ' + sLineBreak
-                      + 'OBS ' + sLineBreak
-                      + 'FROM PLANILHA1 ' + sLineBreak
-                      + 'ORDER BY DTINICIO, HINICIO1 ';
+                        + 'DTINICIO, ' + sLineBreak
+                        + 'DTFIM, ' + sLineBreak
+                        + 'CHAMADOS, ' + sLineBreak
+                        + 'STATUS, ' + sLineBreak
+                        + 'HINICIO1, ' + sLineBreak
+                        + 'PAUSA1, ' + sLineBreak
+                        + 'HINICIO2, ' + sLineBreak
+                        + 'PAUSA2, ' + sLineBreak
+                        + 'HINICIO3, ' + sLineBreak
+                        + 'PAUSA3, ' + sLineBreak
+                        + 'HINICIO4, ' + sLineBreak
+                        + 'PAUSA4, ' + sLineBreak
+                        + 'HINICIO5, ' + sLineBreak
+                        + 'PAUSA5, ' + sLineBreak
+                        + 'TOTHORAS, ' + sLineBreak
+                        + 'CLIENTE, ' + sLineBreak
+                        + 'DESCRICAO, ' + sLineBreak
+                        + 'TIPO, ' + sLineBreak
+                        + 'OBS ' + sLineBreak
+                        + 'FROM PLANILHA1 ' + sLineBreak
+                        + 'ORDER BY DTINICIO, HINICIO1 ';
   QrConsulta.FetchOptions.Mode := fmAll;
   QrConsulta.Open;
   QrConsulta.First;
@@ -848,11 +843,11 @@ begin
   TaskBar1.ProgressState    := TTaskBarProgressState.Normal;
   Gauge1.Visible            := True;
 
-  vQueryInserirChamado := TFDQuery.Create(nil);
+  vQueryInserirChamado            := TFDQuery.Create(nil);
   vQueryInserirChamado.Connection := fdConn;
   vQueryInserirChamado.Close;
 
-  vQueryInserirItChamados := TFDQuery.Create(nil);
+  vQueryInserirItChamados            := TFDQuery.Create(nil);
   vQueryInserirItChamados.Connection := fdConn;
   vQueryInserirItChamados.Close;
 
@@ -917,41 +912,36 @@ begin
         vQueryInserirItChamados.ParamByName('CODCHAMADO').AsInteger  := QrConsulta.FieldByName('CHAMADOS').AsInteger;
         vQueryInserirItChamados.ParamByName('DATAINICIO').AsDateTime := QrConsulta.FieldByName('DTINICIO').AsDateTime;
         vQueryInserirItChamados.ParamByName('STATUS').AsString       := UpperCase(Trim(QrConsulta.FieldByName('STATUS').AsString));
-        if i = 1 then
+        if I = 1 then
         begin
           vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO1').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO1').AsString)));
           vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA1').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA1').AsString)));
         end
-        else
-        if i = 2 then
+        else if I = 2 then
         begin
           vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO2').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO2').AsString)));
           vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA2').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA2').AsString)));
         end
-        else
-        if i = 3 then
+        else if I = 3 then
         begin
           vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO3').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO3').AsString)));
           vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA3').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA3').AsString)));
         end
-        else
-        if i = 4 then
+        else if I = 4 then
         begin
           vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO4').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO4').AsString)));
           vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA4').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA4').AsString)));
         end
-        else
-        if i = 5 then
+        else if I = 5 then
         begin
           vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('HINICIO5').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('HINICIO5').AsString)));
           vQueryInserirItChamados.ParamByName('HORAFIM').AsDateTime    := StrToDateTime(IfThen(Trim(QrConsulta.FieldByName('PAUSA5').AsString) = '', '30/12/1899', Trim(QrConsulta.FieldByName('PAUSA5').AsString)));
         end;
 
-        vQueryInserirItChamados.ParamByName('TIPOCHAMADO').AsString  := UpperCase(Trim(QrConsulta.FieldByName('TIPO').AsString));
-        vQueryInserirItChamados.ParamByName('OBS').AsString          := UpperCase(Trim(memoObs.Lines.Text));
+        vQueryInserirItChamados.ParamByName('TIPOCHAMADO').AsString := UpperCase(Trim(QrConsulta.FieldByName('TIPO').AsString));
+        vQueryInserirItChamados.ParamByName('OBS').AsString         := UpperCase(Trim(memoObs.Lines.Text));
 
-        if (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899 00:00:00')
-          OR (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899') then
+        if (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899 00:00:00') or (DateTimeToStr(vQueryInserirItChamados.ParamByName('HORAINICIO').AsDateTime) = '30/12/1899') then
           Continue
         else
           vQueryInserirItChamados.ExecSQL;
@@ -960,8 +950,8 @@ begin
       fdConn.Commit;
       QrConsulta.Next;
 
-    Except
-      on E:Exception do
+    except
+      on E: Exception do
       begin
         ShowMessage('Erro: ' + e.Message);
         fdConn.Rollback;
@@ -970,7 +960,7 @@ begin
         Break;
       end;
     end;
-    Gauge1.Progress        := Gauge1.Progress +1;
+    Gauge1.Progress        := Gauge1.Progress + 1;
     TaskBar1.ProgressValue := TaskBar1.ProgressValue + 1;
     Application.ProcessMessages;
   end;
@@ -985,12 +975,12 @@ end;
 
 procedure TfrPrincipal.dbgChamadosTitleClick(Column: TColumn);
 var
-  I : integer;
+  I: integer;
 begin
   vNomeCampoSelecionado := '';
 
   for I := 0 to dbgChamados.Columns.Count - 1 do
-    dbgChamados.Columns.Items[i].Title.Font.Style := [];
+    dbgChamados.Columns.Items[I].Title.Font.Style := [];
 
   Column.Title.Font.Style := [fsBold];
   vNomeCampoSelecionado := Column.FieldName;
@@ -1005,7 +995,7 @@ begin
     vQueryChamado.SQL.Add('ORDER BY C.' + vNomeCampoSelecionado + '');
     vOrdenouDesc := False;
   end;
-  edtPesquisa.EditLabel.Caption := 'PESQUISANDO POR: '+ vNomeCampoSelecionado;
+  edtPesquisa.EditLabel.Caption := 'PESQUISANDO POR: ' + vNomeCampoSelecionado;
   vQueryChamado.Open;
   vQueryChamado.First;
 end;
@@ -1019,79 +1009,170 @@ begin
   vQueryChamado.First;
 end;
 
-Function TfrPrincipal.MinparaHora(Minuto: Double): string;
+function TfrPrincipal.MinparaHora(Minuto: Double): string;
 var
-hr : Integer;
-min : Double;
-vTempoFloat : String;
+  hr: Integer;
+  min: Double;
+  vTempoFloat: string;
 begin
   hr := 0;
-  while minuto >= 60 do begin
-    minuto := minuto - 60;
+  while Minuto >= 60 do
+  begin
+    Minuto := Minuto - 60;
     hr := hr + 1;
   end;
-  min := minuto;
+  min := Minuto;
 //  Result := FormatFloat('00:', hr) + FormatFloat('00', min); // forma correta de calcular o tempo, porém eu vou usar como float abaixo
   vTempoFloat := FormatFloat('00:', hr) + FormatFloat('00', min);
   Result := vTempoFloat.Replace(':', ',');
 end;
 
-function TfrPrincipal.AnsiToAscii(str:String):String;
+function TfrPrincipal.AnsiToAscii(str: string): string;
 var
-i: Integer;
+  i: Integer;
 begin
-  for i := 1 to Length ( str ) do
+  for i := 1 to Length(str) do
     case str[i] of
-      'á': str[i] := 'a';
-      'é': str[i] := 'e';
-      'í': str[i] := 'i';
-      'ó': str[i] := 'o';
-      'ú': str[i] := 'u';
-      'à': str[i] := 'a';
-      'è': str[i] := 'e';
-      'ì': str[i] := 'i';
-      'ò': str[i] := 'o';
-      'ù': str[i] := 'u';
-      'â': str[i] := 'a';
-      'ê': str[i] := 'e';
-      'î': str[i] := 'i';
-      'ô': str[i] := 'o';
-      'û': str[i] := 'u';
-      'ä': str[i] := 'a';
-      'ë': str[i] := 'e';
-      'ï': str[i] := 'i';
-      'ö': str[i] := 'o';
-      'ü': str[i] := 'u';
-      'ã': str[i] := 'a';
-      'õ': str[i] := 'o';
-      'ñ': str[i] := 'n';
-      'ç': str[i] := 'c';
-      'Á': str[i] := 'A';
-      'É': str[i] := 'E';
-      'Í': str[i] := 'I';
-      'Ó': str[i] := 'O';
-      'Ú': str[i] := 'U';
-      'À': str[i] := 'A';
-      'È': str[i] := 'E';
-      'Ì': str[i] := 'I';
-      'Ò': str[i] := 'O';
-      'Ù': str[i] := 'U';
-      'Â': str[i] := 'A';
-      'Ê': str[i] := 'E';
-      'Î': str[i] := 'I';
-      'Ô': str[i] := 'O';
-      'Û': str[i] := 'U';
-      'Ä': str[i] := 'A';
-      'Ë': str[i] := 'E';
-      'Ï': str[i] := 'I';
-      'Ö': str[i] := 'O';
-      'Ü': str[i] := 'U';
-      'Ã': str[i] := 'A';
-      'Õ': str[i] := 'O';
-      'Ñ': str[i] := 'N';
-      'Ç': str[i] := 'C';
+      'á':
+        str[i] := 'a';
+      'é':
+        str[i] := 'e';
+      'í':
+        str[i] := 'i';
+      'ó':
+        str[i] := 'o';
+      'ú':
+        str[i] := 'u';
+      'à':
+        str[i] := 'a';
+      'è':
+        str[i] := 'e';
+      'ì':
+        str[i] := 'i';
+      'ò':
+        str[i] := 'o';
+      'ù':
+        str[i] := 'u';
+      'â':
+        str[i] := 'a';
+      'ê':
+        str[i] := 'e';
+      'î':
+        str[i] := 'i';
+      'ô':
+        str[i] := 'o';
+      'û':
+        str[i] := 'u';
+      'ä':
+        str[i] := 'a';
+      'ë':
+        str[i] := 'e';
+      'ï':
+        str[i] := 'i';
+      'ö':
+        str[i] := 'o';
+      'ü':
+        str[i] := 'u';
+      'ã':
+        str[i] := 'a';
+      'õ':
+        str[i] := 'o';
+      'ñ':
+        str[i] := 'n';
+      'ç':
+        str[i] := 'c';
+      'Á':
+        str[i] := 'A';
+      'É':
+        str[i] := 'E';
+      'Í':
+        str[i] := 'I';
+      'Ó':
+        str[i] := 'O';
+      'Ú':
+        str[i] := 'U';
+      'À':
+        str[i] := 'A';
+      'È':
+        str[i] := 'E';
+      'Ì':
+        str[i] := 'I';
+      'Ò':
+        str[i] := 'O';
+      'Ù':
+        str[i] := 'U';
+      'Â':
+        str[i] := 'A';
+      'Ê':
+        str[i] := 'E';
+      'Î':
+        str[i] := 'I';
+      'Ô':
+        str[i] := 'O';
+      'Û':
+        str[i] := 'U';
+      'Ä':
+        str[i] := 'A';
+      'Ë':
+        str[i] := 'E';
+      'Ï':
+        str[i] := 'I';
+      'Ö':
+        str[i] := 'O';
+      'Ü':
+        str[i] := 'U';
+      'Ã':
+        str[i] := 'A';
+      'Õ':
+        str[i] := 'O';
+      'Ñ':
+        str[i] := 'N';
+      'Ç':
+        str[i] := 'C';
     end;
   Result := str;
+end;
+
+procedure TfrPrincipal.CalculaTotaisHoras(TipoIdChamado: String);
+var
+  I : Integer;
+begin
+  if TipoIdChamado = 'UNICO' then
+  begin
+    vQuery.Close;
+    vQuery.Sql.Clear;
+    vQuery.SQL.Add('SELECT DATEDIFF(MINUTE, CAST(IT.HORAINICIO AS TIME), CAST(IT.HORAFIM AS TIME) ) AS DIFERENCA');
+    vQuery.SQL.Add('FROM ITCHAMADO IT WHERE IT.IDITCHAMADO = :IDCHAMADO');
+    vQuery.ParamByName('IDCHAMADO').AsInteger := StrToInt(dbgMestreDetalhe.Columns.Items[0].Field.Text);
+    vQuery.Open;
+    if (Length(vQueryItChamadosHORAFIM.AsString) = 10) or (vQuery.FieldByName('DIFERENCA').AsFloat < 0) then
+      vTotHoras := 0
+    else
+      vTotHoras := vTotHoras + vQuery.FieldByName('DIFERENCA').AsFloat;
+    edtTotalHoras.Text := FormatFloat('00.00', StrToFloat(MinparaHora(vTotHoras))).Replace(',', ':');
+  end
+  else if TipoIdChamado = 'VÁRIOS' then
+  begin
+    for I := 0 to vQueryItChamados.RecordCount - 1 do
+    begin
+      vQuery.Close;
+      vQuery.Sql.Clear;
+      vQuery.SQL.Add('SELECT DATEDIFF(MINUTE, CAST(IT.HORAINICIO AS TIME), CAST(IT.HORAFIM AS TIME) ) AS DIFERENCA');
+      vQuery.SQL.Add('FROM ITCHAMADO IT WHERE IT.IDITCHAMADO = :IDCHAMADO');
+      vQuery.ParamByName('IDCHAMADO').AsInteger := vQueryItChamados.FieldByName('IDITCHAMADO').AsInteger;
+      vQuery.Open;
+      if (Length(vQueryItChamadosHORAFIM.AsString) = 10) or (vQuery.FieldByName('DIFERENCA').AsFloat < 0) then
+        vTotHoras := 0
+      else
+        vTotHoras := vTotHoras + vQuery.FieldByName('DIFERENCA').AsFloat;
+
+      vQueryItChamados.Next;
+    end;
+    edtTotalHoras.Text := FormatFloat('00.00', StrToFloat(MinparaHora(vTotHoras))).Replace(',', ':');
+    vQueryItChamados.First;
+  end;
+
+
 end;
 
 procedure TfrPrincipal.btnRestaurarClick(Sender: TObject);
@@ -1101,7 +1182,7 @@ end;
 
 procedure TfrPrincipal.FormKeyPress(Sender: TObject; var Key: Char);
 begin
-  if key = #13 then
+  if Key = #13 then
   begin
     if ActiveControl = edtPesquisa then
     begin
@@ -1112,8 +1193,11 @@ begin
       else
         btnPesquisarClick(nil);
     end;
+    Key := #0;
+    Perform(wm_NextDlgCtl,0,0);
   end;
 
 end;
 
 end.
+

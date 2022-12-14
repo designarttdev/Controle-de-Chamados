@@ -12,6 +12,7 @@ object frPrincipal: TfrPrincipal
   Font.Name = 'Tahoma'
   Font.Style = []
   KeyPreview = True
+  OldCreateOrder = True
   Position = poScreenCenter
   OnKeyPress = FormKeyPress
   OnShow = FormShow
@@ -190,8 +191,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Width = 33
       EditLabel.Height = 13
       EditLabel.Caption = 'Cliente'
-      TabOrder = 0
-      Text = ''
+      TabOrder = 1
     end
     object edtDataInicial: TMaskEdit
       Left = 153
@@ -202,7 +202,7 @@ object frPrincipal: TfrPrincipal
       CharCase = ecUpperCase
       EditMask = '!99/99/0000;1;_'
       MaxLength = 10
-      TabOrder = 1
+      TabOrder = 2
       Text = '  /  /    '
     end
     object edtChamado: TLabeledEdit
@@ -214,8 +214,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Width = 45
       EditLabel.Height = 13
       EditLabel.Caption = 'Chamado'
-      TabOrder = 2
-      Text = ''
+      TabOrder = 0
     end
     object memoDescricao: TMemo
       Left = 537
@@ -299,8 +298,7 @@ object frPrincipal: TfrPrincipal
       EditLabel.Width = 42
       EditLabel.Height = 13
       EditLabel.Caption = 'Pesquisa'
-      TabOrder = 11
-      Text = ''
+      TabOrder = 12
     end
     object edtIdChamado: TLabeledEdit
       Left = 24
@@ -311,9 +309,8 @@ object frPrincipal: TfrPrincipal
       EditLabel.Width = 58
       EditLabel.Height = 13
       EditLabel.Caption = 'Id Chamado'
-      Enabled = False
-      TabOrder = 13
-      Text = ''
+      ReadOnly = True
+      TabOrder = 14
     end
     object btnImportar: TButton
       Left = 208
@@ -324,7 +321,7 @@ object frPrincipal: TfrPrincipal
       HotImageIndex = 0
       ImageIndex = 0
       Images = ImageList1
-      TabOrder = 14
+      TabOrder = 15
       OnClick = btnImportarClick
     end
     object btnGravar: TButton
@@ -363,7 +360,7 @@ object frPrincipal: TfrPrincipal
       HotImageIndex = 2
       ImageIndex = 2
       Images = ImageList1
-      TabOrder = 12
+      TabOrder = 13
       OnClick = btnLimparCamposClick
     end
     object btnRestaurar: TButton
@@ -376,7 +373,7 @@ object frPrincipal: TfrPrincipal
       HotImageIndex = 1
       ImageIndex = 1
       Images = ImageList1
-      TabOrder = 15
+      TabOrder = 11
       OnClick = btnRestaurarClick
     end
     object btnPesquisar: TButton
@@ -411,7 +408,6 @@ object frPrincipal: TfrPrincipal
       EditLabel.Caption = 'Total Horas'
       ReadOnly = True
       TabOrder = 0
-      Text = ''
     end
   end
   object vQueryChamado: TFDQuery
